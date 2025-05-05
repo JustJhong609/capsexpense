@@ -1,4 +1,16 @@
-import { IonContent, IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonItem, IonLabel, IonInput, IonText } from '@ionic/react';
+import { 
+  IonContent, 
+  IonPage, 
+  IonHeader, 
+  IonToolbar, 
+  IonTitle, 
+  IonItem, 
+  IonLabel, 
+  IonInput, 
+  IonButton,
+  IonText,
+  IonImg
+} from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 
 const Login: React.FC = () => {
@@ -6,8 +18,8 @@ const Login: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your authentication logic here
-    history.push('/home');
+    // Temporary mock login - just navigate to app
+    history.push('/app/dashboard');
   };
 
   return (
@@ -18,9 +30,22 @@ const Login: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+        <div style={{ 
+          maxWidth: '400px', 
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          justifyContent: 'center'
+        }}>
+          <IonImg 
+            src="/assets/icon/icon.png" 
+            style={{ width: '150px', margin: '0 auto 30px' }}
+            alt="App Logo"
+          />
+          
           <IonText color="primary">
-            <h1 className="ion-text-center">Welcome Back</h1>
+            <h1 className="ion-text-center" style={{ marginBottom: '30px' }}>Welcome Back</h1>
           </IonText>
           
           <form onSubmit={handleLogin}>
@@ -34,19 +59,27 @@ const Login: React.FC = () => {
               <IonInput type="password" required />
             </IonItem>
             
-            <IonButton expand="block" type="submit" className="ion-margin-top">
+            <IonButton 
+              expand="block" 
+              type="submit" 
+              className="ion-margin-top"
+              style={{ marginTop: '30px' }}
+            >
               Login
             </IonButton>
           </form>
           
-          <IonButton 
-            expand="block" 
-            fill="clear" 
-            onClick={() => history.push('/register')}
-            className="ion-margin-top"
-          >
-            Don't have an account? Register
-          </IonButton>
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <IonText color="medium">
+              <p>Don't have an account?</p>
+            </IonText>
+            <IonButton 
+              fill="clear" 
+              onClick={() => history.push('/register')}
+            >
+              Register
+            </IonButton>
+          </div>
         </div>
       </IonContent>
     </IonPage>
