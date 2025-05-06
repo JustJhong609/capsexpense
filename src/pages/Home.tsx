@@ -27,7 +27,8 @@ import {
   IonSelect,
   IonSelectOption,
   IonDatetime,
-  IonTextarea
+  IonTextarea,
+  IonAlert
 } from '@ionic/react';
 import { useState } from 'react';
 import { useHistory } from 'react-router-dom';
@@ -49,7 +50,9 @@ import {
   film,
   medkit,
   cart,
-  ellipsisHorizontal
+  ellipsisHorizontal,
+  trashOutline,
+  createOutline
 } from 'ionicons/icons';
 
 // Define category and expense types
@@ -70,13 +73,26 @@ interface Expense {
 const Home: React.FC = () => {
   const history = useHistory();
   const [showModal, setShowModal] = useState(false);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [expenses, setExpenses] = useState<Expense[]>([
+    // Sample data for testing
+    {
+      id: '1',
+      amount: 650,
+      category: 'other',
+      date: new Date().toISOString(),
+      description: 'Red Horse'
+    }
+  ]);
   const [newExpense, setNewExpense] = useState<Omit<Expense, 'id'>>({
     amount: 0,
     category: '',
     date: new Date().toISOString(),
     description: ''
   });
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   // Categories data
   const categories: Category[] = [
@@ -92,7 +108,7 @@ const Home: React.FC = () => {
 
   // Calculate dashboard data
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const remainingBudget = 10000 - totalExpenses; // Assuming initial budget of 5000
+  const remainingBudget = 10000 - totalExpenses;
   
   // Get top category
   const getTopCategory = () => {
@@ -143,6 +159,34 @@ const Home: React.FC = () => {
       description: ''
     });
     setShowModal(false);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateExpense = () => {
+    if (!editingExpense) return;
+    
+    setExpenses(prev => prev.map(exp => 
+      exp.id === editingExpense.id ? editingExpense : exp
+    ));
+    setShowEditModal(false);
+    setEditingExpense(null);
+  };
+
+  const confirmDelete = (id: string) => {
+    setExpenseToDelete(id);
+    setShowDeleteAlert(true);
+  };
+
+  const handleDeleteExpense = () => {
+    if (!expenseToDelete) return;
+    
+    setExpenses(prev => prev.filter(exp => exp.id !== expenseToDelete));
+    setExpenseToDelete(null);
+    setShowDeleteAlert(false);
   };
 
   return (
@@ -290,10 +334,24 @@ const Home: React.FC = () => {
                     <IonLabel>
                       <h3>{categories.find(c => c.id === expense.category)?.name || 'Other'}</h3>
                       <p>{expense.description || 'No description'}</p>
+                      <p>{new Date(expense.date).toLocaleDateString()}</p>
                     </IonLabel>
                     <IonLabel slot="end" color="danger">
                       -₱{expense.amount.toFixed(2)}
                     </IonLabel>
+                    <IonButton 
+                      fill="clear" 
+                      onClick={() => handleEditExpense(expense)}
+                    >
+                      <IonIcon icon={createOutline} />
+                    </IonButton>
+                    <IonButton 
+                      fill="clear" 
+                      color="danger" 
+                      onClick={() => confirmDelete(expense.id)}
+                    >
+                      <IonIcon icon={trashOutline} />
+                    </IonButton>
                   </IonItem>
                 ))}
               </IonList>
@@ -366,6 +424,108 @@ const Home: React.FC = () => {
           </IonButton>
         </IonContent>
       </IonModal>
+
+      {/* Edit Expense Modal */}
+      <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)}>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Edit Expense</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowEditModal(false)}>Close</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          {editingExpense && (
+            <>
+              <IonItem>
+                <IonLabel position="stacked">Amount (₱)</IonLabel>
+                <IonInput
+                  type="number"
+                  value={editingExpense.amount}
+                  onIonChange={e => setEditingExpense({
+                    ...editingExpense,
+                    amount: parseFloat(e.detail.value!) || 0
+                  })}
+                  placeholder="0.00"
+                ></IonInput>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel position="stacked">Category</IonLabel>
+                <IonSelect
+                  value={editingExpense.category}
+                  placeholder="Select Category"
+                  onIonChange={e => setEditingExpense({
+                    ...editingExpense,
+                    category: e.detail.value
+                  })}
+                >
+                  {categories.map(category => (
+                    <IonSelectOption key={category.id} value={category.id}>
+                      <IonIcon icon={category.icon} slot="start" />
+                      {category.name}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+  <IonLabel position="stacked">Date</IonLabel>
+  <IonDatetime
+    value={editingExpense.date}
+    onIonChange={e => {
+      const selectedDate = e.detail.value;
+      if (selectedDate) {
+        setEditingExpense(prev => prev ? { ...prev, date: selectedDate.toString() } : prev);
+      }
+    }}
+  ></IonDatetime>
+</IonItem>
+
+
+              <IonItem>
+                <IonLabel position="stacked">Description (Optional)</IonLabel>
+                <IonTextarea
+                  value={editingExpense.description}
+                  onIonChange={e => setEditingExpense({
+                    ...editingExpense,
+                    description: e.detail.value!
+                  })}
+                  placeholder="Add notes about this expense"
+                ></IonTextarea>
+              </IonItem>
+
+              <IonButton 
+                expand="block" 
+                onClick={handleUpdateExpense} 
+                className="ion-margin-top"
+                disabled={!editingExpense.amount || !editingExpense.category}
+              >
+                Update Expense
+              </IonButton>
+            </>
+          )}
+        </IonContent>
+      </IonModal>
+
+      {/* Delete Confirmation Alert */}
+      <IonAlert
+        isOpen={showDeleteAlert}
+        onDidDismiss={() => setShowDeleteAlert(false)}
+        header={'Confirm Delete'}
+        message={'Are you sure you want to delete this expense?'}
+        buttons={[
+          {
+            text: 'Cancel',
+            role: 'cancel'
+          },
+          {
+            text: 'Delete',
+            handler: handleDeleteExpense
+          }
+        ]}
+      />
     </>
   );
 };

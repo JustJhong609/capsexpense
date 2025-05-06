@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
+import About from './pages/About';
 
 
 /* Core CSS required for Ionic components to work properly */
@@ -44,6 +45,7 @@ const App: React.FC = () => {
           <Route exact path="/dashboard" component={Home} />
           <Route path="/reports" component={Reports} />
           <Route exact path="/profile" component={Profile} />
+          <Route path="/about" component={About} />
           <Route exact path="/">
             <Redirect to={isAuthenticated ? "/home" : "/login"} />
           </Route>
