@@ -98,7 +98,6 @@ const Home: React.FC = () => {
   const categories: Category[] = [
     { id: 'food', name: 'Food', icon: restaurant },
     { id: 'transport', name: 'Transport', icon: car },
-    { id: 'housing', name: 'Housing', icon: home },
     { id: 'utilities', name: 'Utilities', icon: flash },
     { id: 'entertainment', name: 'Entertainment', icon: film },
     { id: 'health', name: 'Health', icon: medkit },
