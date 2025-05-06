@@ -164,7 +164,7 @@ const Home: React.FC = () => {
                 alt="Profile" 
               />
             </IonAvatar>
-            <h3 style={{ marginTop: '10px' }}>User Name</h3>
+            <h3 style={{ marginTop: '10px' }}>Just Jhong</h3>
           </div>
 
           {/* Main Menu Items */}
