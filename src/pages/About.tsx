@@ -25,7 +25,7 @@ import {
         name: "Just Jhong",
         github: "JustJhong609",
         avatar: "https://github.com/JustJhong609.png",
-        role: "Frontend/Backend Developer"
+        role: "Frontend/Backend Developer - UI/UX Designer"
       },
       {
         name: "Samantha Nics",
