@@ -210,12 +210,12 @@ const Home: React.FC = () => {
             <h3 style={{ marginTop: '10px' }}>Just Jhong</h3>
           </div>
 
-          {/* Main Menu Items */}
           <IonList lines="none">
-            <IonItem button onClick={() => handleNavigation('/')}>
-              <IonIcon icon={homeOutline} slot="start" />
-              <IonLabel>Dashboard</IonLabel>
-            </IonItem>
+      {/* Dashboard Item - Fixed to go to dashboard directly */}
+      <IonItem button routerLink="/dashboard" routerDirection="root">
+        <IonIcon icon={homeOutline} slot="start" />
+        <IonLabel>Dashboard</IonLabel>
+      </IonItem>
 
             {/* Quick Actions Section */}
             <IonItemGroup>
