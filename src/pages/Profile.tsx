@@ -32,7 +32,7 @@ const Profile: React.FC = () => {
     username: '',
     name: '',
     email: '',
-    avatar: 'https://ionicframework.com/docs/img/demos/avatar.svg',
+    avatar: 'src="https://qqedcpqscxjsvdvnlibw.supabase.co/storage/v1/object/public/user-avatars/b07a0d67-a614-4fa0-9a89-329d52379938/0.8391265851162987.jpg"',
     password: ''
   });
   
