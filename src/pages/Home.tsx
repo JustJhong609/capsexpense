@@ -30,7 +30,7 @@ import {
   IonTextarea,
   IonAlert
 } from '@ionic/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { menuController } from '@ionic/core';
 import { 
@@ -54,8 +54,9 @@ import {
   trashOutline,
   createOutline
 } from 'ionicons/icons';
+import supabase from '../utils/supabaseClient'; // Make sure to configure your Supabase client
 
-// Define category and expense types
+// Define category, expense, and budget types
 interface Category {
   id: string;
   name: string;
@@ -68,6 +69,13 @@ interface Expense {
   category: string;
   date: string;
   description: string;
+  user_id: string;
+}
+
+interface Budget {
+  id: string;
+  amount: number;
+  user_id: string;
 }
 
 const Home: React.FC = () => {
@@ -75,24 +83,19 @@ const Home: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-  const [expenses, setExpenses] = useState<Expense[]>([
-    // Sample data for testing
-    {
-      id: '1',
-      amount: 650,
-      category: 'other',
-      date: new Date().toISOString(),
-      description: 'Red Horse'
-    }
-  ]);
-  const [newExpense, setNewExpense] = useState<Omit<Expense, 'id'>>({
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [budget, setBudget] = useState<Budget | null>(null);
+  const [newBudgetAmount, setNewBudgetAmount] = useState(0);
+  const [newExpense, setNewExpense] = useState<Omit<Expense, 'id' | 'user_id'>>({
     amount: 0,
     category: '',
     date: new Date().toISOString(),
     description: ''
   });
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [session, setSession] = useState<any>(null);
 
   // Categories data
   const categories: Category[] = [
@@ -105,9 +108,78 @@ const Home: React.FC = () => {
     { id: 'other', name: 'Other', icon: ellipsisHorizontal }
   ];
 
+  // Load data when component mounts or session changes
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (!session) {
+        history.push('/login');
+      }
+    };
+
+    fetchSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      if (!session) {
+        history.push('/login');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [history]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchExpenses();
+      fetchBudget();
+    }
+  }, [session]);
+
+  const fetchExpenses = async () => {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching expenses:', error);
+    } else {
+      setExpenses(data || []);
+    }
+  };
+
+  const fetchBudget = async () => {
+    const { data, error } = await supabase
+      .from('budgets')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (error) {
+      // If no budget exists, create a default one
+      if (error.code === 'PGRST116') {
+        const { data: newBudget } = await supabase
+          .from('budgets')
+          .insert([{ user_id: session.user.id, amount: 10000 }])
+          .select()
+          .single();
+        setBudget(newBudget);
+      } else {
+        console.error('Error fetching budget:', error);
+      }
+    } else {
+      setBudget(data);
+    }
+  };
+
   // Calculate dashboard data
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const remainingBudget = 10000 - totalExpenses;
+  const remainingBudget = (budget?.amount || 10000) - totalExpenses;
   
   // Get top category
   const getTopCategory = () => {
@@ -128,6 +200,7 @@ const Home: React.FC = () => {
 
   const handleLogout = async () => {
     await menuController.close();
+    await supabase.auth.signOut();
     history.push('/login');
   };
 
@@ -143,21 +216,30 @@ const Home: React.FC = () => {
     }));
   };
 
-  const handleAddExpense = () => {
-    const expenseToAdd = {
-      ...newExpense,
-      id: Date.now().toString(),
-      amount: parseFloat(newExpense.amount.toString()) || 0
-    };
-    
-    setExpenses(prev => [...prev, expenseToAdd]);
-    setNewExpense({
-      amount: 0,
-      category: '',
-      date: new Date().toISOString(),
-      description: ''
-    });
-    setShowModal(false);
+  const handleAddExpense = async () => {
+    if (!session?.user?.id) return;
+
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert([{
+        ...newExpense,
+        user_id: session.user.id,
+        amount: parseFloat(newExpense.amount.toString()) || 0
+      }])
+      .select();
+
+    if (error) {
+      console.error('Error adding expense:', error);
+    } else {
+      setExpenses(prev => [data[0], ...prev]);
+      setNewExpense({
+        amount: 0,
+        category: '',
+        date: new Date().toISOString(),
+        description: ''
+      });
+      setShowModal(false);
+    }
   };
 
   const handleEditExpense = (expense: Expense) => {
@@ -165,14 +247,24 @@ const Home: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdateExpense = () => {
-    if (!editingExpense) return;
+  const handleUpdateExpense = async () => {
+    if (!editingExpense || !session?.user?.id) return;
     
-    setExpenses(prev => prev.map(exp => 
-      exp.id === editingExpense.id ? editingExpense : exp
-    ));
-    setShowEditModal(false);
-    setEditingExpense(null);
+    const { error } = await supabase
+      .from('expenses')
+      .update(editingExpense)
+      .eq('id', editingExpense.id)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      console.error('Error updating expense:', error);
+    } else {
+      setExpenses(prev => prev.map(exp => 
+        exp.id === editingExpense.id ? editingExpense : exp
+      ));
+      setShowEditModal(false);
+      setEditingExpense(null);
+    }
   };
 
   const confirmDelete = (id: string) => {
@@ -180,12 +272,41 @@ const Home: React.FC = () => {
     setShowDeleteAlert(true);
   };
 
-  const handleDeleteExpense = () => {
-    if (!expenseToDelete) return;
+  const handleDeleteExpense = async () => {
+    if (!expenseToDelete || !session?.user?.id) return;
     
-    setExpenses(prev => prev.filter(exp => exp.id !== expenseToDelete));
-    setExpenseToDelete(null);
-    setShowDeleteAlert(false);
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', expenseToDelete)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      console.error('Error deleting expense:', error);
+    } else {
+      setExpenses(prev => prev.filter(exp => exp.id !== expenseToDelete));
+      setExpenseToDelete(null);
+      setShowDeleteAlert(false);
+    }
+  };
+
+  const handleUpdateBudget = async () => {
+    if (!session?.user?.id || !budget) return;
+
+    const { data, error } = await supabase
+      .from('budgets')
+      .update({ amount: newBudgetAmount })
+      .eq('id', budget.id)
+      .eq('user_id', session.user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating budget:', error);
+    } else {
+      setBudget(data);
+      setShowBudgetModal(false);
+    }
   };
 
   return (
@@ -207,15 +328,14 @@ const Home: React.FC = () => {
                 alt="Profile" 
               />
             </IonAvatar>
-            <h3 style={{ marginTop: '10px' }}>Just Jhong</h3>
+            <h3 style={{ marginTop: '10px' }}>{session?.user?.email || 'User'}</h3>
           </div>
 
           <IonList lines="none">
-      {/* Dashboard Item - Fixed to go to dashboard directly */}
-      <IonItem button routerLink="/dashboard" routerDirection="root">
-        <IonIcon icon={homeOutline} slot="start" />
-        <IonLabel>Dashboard</IonLabel>
-      </IonItem>
+            <IonItem button routerLink="/dashboard" routerDirection="root">
+              <IonIcon icon={homeOutline} slot="start" />
+              <IonLabel>Dashboard</IonLabel>
+            </IonItem>
 
             {/* Quick Actions Section */}
             <IonItemGroup>
@@ -286,13 +406,22 @@ const Home: React.FC = () => {
                 </IonCard>
               </IonCol>
 
-              {/* Remaining Budget Card */}
+              {/* Remaining Budget Card - Now clickable to edit budget */}
               <IonCol size="12" sizeMd="4">
-                <IonCard color="success" style={{ height: '100%' }}>
+                <IonCard 
+                  color="success" 
+                  style={{ height: '100%' }}
+                  button
+                  onClick={() => {
+                    setNewBudgetAmount(budget?.amount || 10000);
+                    setShowBudgetModal(true);
+                  }}
+                >
                   <IonCardHeader>
                     <IonIcon icon={walletOutline} size="large" />
                     <IonCardSubtitle>Remaining Budget</IonCardSubtitle>
                     <IonCardTitle>₱{remainingBudget.toFixed(2)}</IonCardTitle>
+                    <IonCardSubtitle>Click to edit budget</IonCardSubtitle>
                   </IonCardHeader>
                 </IonCard>
               </IonCol>
@@ -470,18 +599,17 @@ const Home: React.FC = () => {
               </IonItem>
 
               <IonItem>
-  <IonLabel position="stacked">Date</IonLabel>
-  <IonDatetime
-    value={editingExpense.date}
-    onIonChange={e => {
-      const selectedDate = e.detail.value;
-      if (selectedDate) {
-        setEditingExpense(prev => prev ? { ...prev, date: selectedDate.toString() } : prev);
-      }
-    }}
-  ></IonDatetime>
-</IonItem>
-
+                <IonLabel position="stacked">Date</IonLabel>
+                <IonDatetime
+                  value={editingExpense.date}
+                  onIonChange={e => {
+                    const selectedDate = e.detail.value;
+                    if (selectedDate) {
+                      setEditingExpense(prev => prev ? { ...prev, date: selectedDate.toString() } : prev);
+                    }
+                  }}
+                ></IonDatetime>
+              </IonItem>
 
               <IonItem>
                 <IonLabel position="stacked">Description (Optional)</IonLabel>
@@ -505,6 +633,38 @@ const Home: React.FC = () => {
               </IonButton>
             </>
           )}
+        </IonContent>
+      </IonModal>
+
+      {/* Budget Edit Modal */}
+      <IonModal isOpen={showBudgetModal} onDidDismiss={() => setShowBudgetModal(false)}>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Edit Budget</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowBudgetModal(false)}>Close</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <IonItem>
+            <IonLabel position="stacked">Monthly Budget (₱)</IonLabel>
+            <IonInput
+              type="number"
+              value={newBudgetAmount}
+              onIonChange={e => setNewBudgetAmount(parseFloat(e.detail.value!) || 0)}
+              placeholder="Enter your monthly budget"
+            ></IonInput>
+          </IonItem>
+
+          <IonButton 
+            expand="block" 
+            onClick={handleUpdateBudget} 
+            className="ion-margin-top"
+            disabled={!newBudgetAmount}
+          >
+            Update Budget
+          </IonButton>
         </IonContent>
       </IonModal>
 
