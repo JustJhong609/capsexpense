@@ -14,7 +14,8 @@ import {
     IonDatetime,
     IonTextarea
   } from '@ionic/react';
-  import { categories } from '../data/categories'; // We'll create this next
+  import { categories } from '../data/categories'; 
+  import React from 'react';
   
   interface AddExpenseModalProps {
     isOpen: boolean;
@@ -31,10 +32,10 @@ import {
   
   const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSave }) => {
     const [expense, setExpense] = React.useState<Expense>({
-      amount: 0,
-      category: '',
-      date: new Date().toISOString(),
-      description: ''
+        amount: 0,
+        category: '',
+        date: new Date().toISOString(), 
+        description: ''
     });
   
     const handleInputChange = (field: keyof Expense, value: any) => {
