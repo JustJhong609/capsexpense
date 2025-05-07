@@ -1,0 +1,101 @@
+/* Add to About.css */
+/* Add to About.css */
+.project-card,
+.acknowledgment-card {
+  margin: 16px;
+  border-radius: 12px;
+}
+
+.project-card p,
+.acknowledgment-card p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.tech-stack {
+  margin-top: 16px !important;
+  font-weight: 500;
+}
+
+.tech-stack span {
+  color: var(--ion-color-primary);
+  font-weight: 600;
+}
+
+.made-with {
+  margin-top: 12px !important;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.acknowledgment-card a {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ion-color-primary);
+  text-decoration: none;
+  margin-top: 8px;
+}
+
+.acknowledgment-card ion-icon {
+  margin-right: 6px;
+}
+
+/* Keep all your existing CSS below this line */
+.authors-card {
+    margin: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+  
+/* ... rest of your existing CSS ... */
+
+.authors-card {
+    margin: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .authors-list {
+    background: transparent;
+  }
+  
+  .author-item {
+    --padding-start: 0;
+    --inner-padding-end: 0;
+    --background: transparent;
+    --background-hover: rgba(var(--ion-color-primary-rgb), 0.08);
+    margin-bottom: 12px;
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+  }
+  
+  .author-item:hover {
+    transform: translateY(-2px);
+  }
+  
+  .author-item ion-avatar {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+  }
+  
+  .author-item h3 {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  
+  .author-item p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+  }
+  
+  .github-handle {
+    color: var(--ion-color-primary) !important;
+    font-size: 0.8rem !important;
+    margin-top: 4px !important;
+  }
+  
+  .author-item ion-icon {
+    font-size: 24px;
+  }
