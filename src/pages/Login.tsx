@@ -5,14 +5,32 @@ import {
 } from '@ionic/react';
 import { mailOutline, lockClosedOutline, logInOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import { useState } from 'react';
+import supabase from '../utils/supabaseClient';
 
 const Login: React.FC = () => {
   const history = useHistory();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add authentication logic here
-    history.push('/home');
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      history.push('/home');
+    } catch (error) {
+      alert('Login failed. Please try again.');
+    }
   };
 
   return (
@@ -97,6 +115,8 @@ const Login: React.FC = () => {
                       placeholder="Email Address"
                       type="email"
                       required
+                      value={email}
+                      onIonChange={(e) => setEmail(e.detail.value!)}
                       style={{
                         '--padding-start': '12px',
                         '--background': 'transparent',
@@ -131,6 +151,8 @@ const Login: React.FC = () => {
                       placeholder="Password"
                       type="password"
                       required
+                      value={password}
+                      onIonChange={(e) => setPassword(e.detail.value!)}
                       style={{
                         '--padding-start': '12px',
                         '--background': 'transparent',
@@ -171,7 +193,7 @@ const Login: React.FC = () => {
                     margin: '0',
                     fontSize: '0.95rem'
                   }}>
-                    Don’t have an account?
+                    Don't have an account?
                   </p>
                   <IonButton
                     fill="clear"
