@@ -4,14 +4,48 @@ import {
   IonGrid, IonRow, IonCol
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
+import { useState } from 'react';
+import supabase from '../utils/supabaseClient';
 
 const Register: React.FC = () => {
   const history = useHistory();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add registration logic here
-    history.push('/home');
+    
+    // Basic validation
+    if (password !== confirmPassword) {
+      alert("Passwords don't match!");
+      return;
+    }
+
+    try {
+      // 1. Sign up with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // 2. Show success message
+      alert('Registration successful! Please check your email to verify your account.');
+
+      // 3. Redirect to login
+      history.push('/login');
+      
+    } catch (error) {
+      alert('Registration failed: ' + error);
+    }
   };
 
   return (
@@ -87,6 +121,8 @@ const Register: React.FC = () => {
                       placeholder="Name"
                       type="text"
                       required
+                      value={name}
+                      onIonChange={(e) => setName(e.detail.value!)}
                       style={{
                         '--padding-start': '0',
                         '--background': 'transparent',
@@ -113,6 +149,8 @@ const Register: React.FC = () => {
                       placeholder="Email Address"
                       type="email"
                       required
+                      value={email}
+                      onIonChange={(e) => setEmail(e.detail.value!)}
                       style={{
                         '--padding-start': '0',
                         '--background': 'transparent',
@@ -139,6 +177,8 @@ const Register: React.FC = () => {
                       placeholder="Password"
                       type="password"
                       required
+                      value={password}
+                      onIonChange={(e) => setPassword(e.detail.value!)}
                       style={{
                         '--padding-start': '0',
                         '--background': 'transparent',
@@ -165,6 +205,8 @@ const Register: React.FC = () => {
                       placeholder="Confirm Password"
                       type="password"
                       required
+                      value={confirmPassword}
+                      onIonChange={(e) => setConfirmPassword(e.detail.value!)}
                       style={{
                         '--padding-start': '0',
                         '--background': 'transparent',

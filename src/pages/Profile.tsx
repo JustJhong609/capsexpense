@@ -12,25 +12,26 @@ import {
   IonGrid,
   IonRow,
   IonCol,
-  useIonAlert,
+  useIonToast,
   IonButtons,
   IonBackButton,
   IonText
 } from '@ionic/react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { chevronBack, camera, save, pencil, close } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import supabase from '../utils/supabaseClient';
 
 const Profile: React.FC = () => {
   const history = useHistory();
-  const [present] = useIonAlert();
+  const [present] = useIonToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // User data state
   const [user, setUser] = useState({
-    username: 'john_doe',
-    name: 'John Doe',
-    email: 'john@example.com',
+    username: '',
+    name: '',
+    email: '',
     avatar: 'https://ionicframework.com/docs/img/demos/avatar.svg',
     password: ''
   });
@@ -40,20 +41,76 @@ const Profile: React.FC = () => {
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [originalUser, setOriginalUser] = useState({ ...user });
 
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (authUser) {
+        // Get user profile from public.users table
+        const { data: profile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .single();
+        
+        if (profile) {
+          setUser({
+            username: profile.username || authUser.email?.split('@')[0] || '',
+            name: profile.name || '',
+            email: authUser.email || '',
+            avatar: profile.avatar_url || 'https://ionicframework.com/docs/img/demos/avatar.svg',
+            password: ''
+          });
+        }
+      }
+    };
+    
+    fetchUserData();
+  }, []);
+
   const handleInputChange = (field: keyof typeof user, value: string) => {
     setUser(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setUser(prev => ({ ...prev, avatar: event.target!.result as string }));
-        }
-      };
-      reader.readAsDataURL(file);
+      // Upload to Supabase Storage
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${authUser.id}/${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        present(uploadError.message, 3000);
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(filePath);
+
+      // Update user avatar in state
+      setUser(prev => ({ ...prev, avatar: publicUrl }));
+
+      // Update profile in database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: publicUrl })
+        .eq('id', authUser.id);
+
+      if (updateError) {
+        present(updateError.message, 3000);
+      }
     }
   };
 
@@ -78,29 +135,53 @@ const Profile: React.FC = () => {
         user.avatar !== originalUser.avatar) {
       setShowPasswordPrompt(true);
     } else {
-      present('No changes were made', [{ text: 'OK' }]);
+      present('No changes were made', 3000);
       setEditMode(false);
     }
   };
 
-  const confirmPasswordAndSave = () => {
-    if (tempPassword === 'password123') { // Replace with actual password verification
-      present({
-        header: 'Success',
-        message: 'Profile updated successfully!',
-        buttons: ['OK']
+  const confirmPasswordAndSave = async () => {
+    try {
+      // Verify password
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: tempPassword
       });
+
+      if (authError) throw authError;
+
+      // Update user data in Supabase
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          username: user.username,
+          name: user.name,
+          email: user.email
+        })
+        .eq('id', authUser.id);
+
+      if (error) throw error;
+
+      // Update auth email if changed
+      if (user.email !== originalUser.email) {
+        const { error: updateError } = await supabase.auth.updateUser({
+          email: user.email
+        });
+        if (updateError) throw updateError;
+      }
+
+      present('Profile updated successfully!', 3000);
       setEditMode(false);
       setTempPassword('');
       setShowPasswordPrompt(false);
-    } else {
-      present({
-        header: 'Error',
-        message: 'Incorrect password. Please try again.',
-        buttons: ['OK']
-      });
+    } catch (error: any) {
+      present(error.message || 'Failed to update profile', 3000);
     }
   };
+
 
   return (
     <IonPage>
