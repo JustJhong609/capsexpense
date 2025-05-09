@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "hompage": "https://github.com/JustJhong609/capsexpense.git",
+  "homepage": "https://justjhong609.github.io/capsexpense",
 
   "scripts": {
     "predeploy": "npm run build",
