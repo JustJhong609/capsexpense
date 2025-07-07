@@ -4,8 +4,10 @@ import legacy from '@vitejs/plugin-legacy'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// https://vitejs.dev/config/
+const isProd = process.env.NODE_ENV === 'production';
+
 export default defineConfig({
+  base: isProd ? "/capsexpense/" : "/",
   plugins: [
     react(),
     legacy()
@@ -16,3 +18,4 @@ export default defineConfig({
     setupFiles: './src/setupTests.ts',
   }
 })
+
